@@ -1,10 +1,29 @@
 services:
   postgres-compose:
+
+    # Imagem oficial do PostgreSQL na versão 18
     image: postgres:18
+
     environment:
+
+      # Senha do usuário padrão "postgres"
       POSTGRES_PASSWORD: "admin"
+
     ports:
+
+      # Mapeamento de portas
+      # PORTA_DO_PC:PORTA_DO_CONTAINER
+      # Permite acessar o PostgreSQL pelo localhost:5432
       - "5432:5432"
+
+    # Nome personalizado do container
     container_name: "meu_postgres"
+
     volumes:
+
+      # Persistência de dados
+      # Tudo que for salvo no banco ficará na pasta:
+      # C:/Meu_Banco_Postgres
+      #
+      # Isso evita perder os dados ao remover o container
       - "C:/Meu_Banco_Postgres:/var/lib/postgresql"

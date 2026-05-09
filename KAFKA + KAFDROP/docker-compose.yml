@@ -1,53 +1,96 @@
 services:
+
   kafka:
+
+    # Nome personalizado do container
     container_name: KAFKA
+
+    # Imagem oficial da Confluent com Apache Kafka
     image: confluentinc/cp-kafka:latest
 
     ports:
+
+      # Mapeamento de portas
+      # PORTA_DO_PC:PORTA_DO_CONTAINER
+      #
+      # Permite acessar o Kafka via localhost:9092
       - "9092:9092"
 
     environment:
-      # ID único do broker
+
+      # ID único do broker Kafka
+      # Em clusters reais cada broker possui um ID diferente
       KAFKA_NODE_ID: 1
 
-      # Define as funções do Kafka no modo KRaft
+      # Define as roles do Kafka no modo KRaft
+      #
+      # broker:
+      # Responsável por armazenar e entregar mensagens
+      #
+      # controller:
+      # Responsável por coordenar o cluster
+      #
+      # Neste projeto o mesmo container faz os dois papéis
       KAFKA_PROCESS_ROLES: broker,controller
 
       # Listeners do Kafka
+      #
+      # PLAINTEXT -> acesso externo (Windows/localhost)
+      # PLAINTEXT_INTERNAL -> comunicação interna Docker
+      # CONTROLLER -> comunicação do KRaft controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
 
-      # Endereços anunciados
+      # Endereços que o Kafka anuncia para os clientes
+      #
+      # localhost:9092 -> aplicações fora do Docker
+      # kafka:29092 -> containers Docker
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
 
-      # Protocolos dos listeners
+      # Protocolos utilizados pelos listeners
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
 
-      # Comunicação interna entre brokers
+      # Listener utilizado para comunicação interna entre brokers
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
 
-      # Listener do controller
+      # Define qual listener será utilizado pelo controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
-      # Controllers do cluster
+      # Define os controllers do cluster
+      #
+      # Formato:
+      # ID@HOST:PORTA
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
-      # Configuração para ambiente local
+      # Configurações necessárias para ambiente local
+      # utilizando apenas 1 broker
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
-      # ID do cluster
+      # ID único do cluster KRaft
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
 
   kafdrop:
+
+    # Nome personalizado do container
     container_name: KAFDROP
+
+    # Interface web para visualizar tópicos,
+    # mensagens, consumers e brokers do Kafka
     image: obsidiandynamics/kafdrop:latest
 
     depends_on:
+
+      # Garante que o Kafka suba antes do Kafdrop
       - kafka
 
     ports:
+
+      # Interface web disponível em:
+      # http://localhost:19000
       - "19000:9000"
 
     environment:
+
+      # Endereço interno do Kafka na rede Docker
       KAFKA_BROKERCONNECT: kafka:29092
