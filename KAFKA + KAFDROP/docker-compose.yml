@@ -1,0 +1,53 @@
+services:
+  kafka:
+    container_name: KAFKA
+    image: confluentinc/cp-kafka:latest
+
+    ports:
+      - "9092:9092"
+
+    environment:
+      # ID único do broker
+      KAFKA_NODE_ID: 1
+
+      # Define as funções do Kafka no modo KRaft
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Listeners do Kafka
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+
+      # Endereços anunciados
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+
+      # Protocolos dos listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+
+      # Comunicação interna entre brokers
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+
+      # Listener do controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Controllers do cluster
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Configuração para ambiente local
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # ID do cluster
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  kafdrop:
+    container_name: KAFDROP
+    image: obsidiandynamics/kafdrop:latest
+
+    depends_on:
+      - kafka
+
+    ports:
+      - "19000:9000"
+
+    environment:
+      KAFKA_BROKERCONNECT: kafka:29092
