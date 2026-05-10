@@ -17,7 +17,7 @@ services:
       - "5432:5432"
 
     # Nome personalizado do container
-    container_name: "meu_postgres"
+    container_name: POSTGRES
 
     volumes:
 
