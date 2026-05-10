@@ -1,0 +1,91 @@
+services:
+
+  kafka:
+
+    # Nome fixo do container (facilita debug e logs)
+    container_name: KAFKA
+
+    # Imagem oficial da Confluent com Kafka
+    image: confluentinc/cp-kafka:latest
+
+    ports:
+      # Expõe o Kafka para acesso externo (Spring Boot fora do Docker)
+      - "9092:9092"
+
+    environment:
+
+      # =========================
+      # IDENTIFICAÇÃO DO BROKER
+      # =========================
+
+      # ID único do broker (em cluster real, cada um tem um ID)
+      KAFKA_NODE_ID: 1
+
+      # Kafka rodando em modo KRaft (sem Zookeeper)
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # =========================
+      # LISTENERS (CANAIS DE COMUNICAÇÃO)
+      # =========================
+
+      # Define onde o Kafka escuta conexões
+      # PLAINTEXT -> externo (host)
+      # PLAINTEXT_INTERNAL -> containers Docker
+      # CONTROLLER -> coordenação do cluster KRaft
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+
+      # Define como o Kafka "se anuncia" para os clientes
+      # localhost -> aplicações fora do Docker (Spring Boot local)
+      # kafka -> outros containers dentro da rede Docker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+
+      # Mapeia os protocolos usados por cada listener
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+
+      # Define qual listener será usado para comunicação entre brokers
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+
+      # Listener responsável pelo controller (KRaft)
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Define o quorum do controller (cluster metadata)
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # =========================
+      # CONFIGURAÇÃO SINGLE BROKER (DEV)
+      # =========================
+
+      # Evita replicação para múltiplos brokers (ambiente local)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # ID único do cluster KRaft
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+
+  kafka-ui:
+
+    # Nome do container da interface web
+    container_name: KAFKA-UI
+
+    # UI moderna para visualizar Kafka (topics, mensagens, consumers)
+    image: provectuslabs/kafka-ui:latest
+
+    # Garante que o Kafka suba antes da UI
+    depends_on:
+      - kafka
+
+    ports:
+      # Evita conflito com Spring Boot (8080)
+      # UI ficará em http://localhost:8081
+      - "19000:8080"
+
+    environment:
+
+      # Nome do cluster exibido na interface
+      KAFKA_CLUSTERS_0_NAME: local
+
+      # Endereço interno do Kafka dentro do Docker
+      # (IMPORTANTE: não usar localhost aqui)
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
