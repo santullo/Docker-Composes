@@ -39,20 +39,24 @@ Os arquivos ficam no volume `redis_data`, montado em `/data`.
 | Serviço | Imagem | Descrição |
 |---|---|---|
 | `redis` | `redis:8.8-alpine` (oficial) | Servidor Redis com senha, AOF e RDB |
+| `redisinsight` | `redis/redisinsight:3.8.0` (oficial) | Painel web para navegar por chaves, rodar comandos e ver métricas |
 
 ## 5. Portas
 
 | Porta (host) | Porta (container) | Uso |
 |---|---|---|
 | `127.0.0.1:6379` | `6379` | Protocolo Redis (RESP) |
+| `127.0.0.1:5540` | `5540` | Painel RedisInsight: http://localhost:5540 |
 
 ## 6. Variáveis de ambiente
 
 | Variável | Padrão no `.env.example` | Descrição |
 |---|---|---|
 | `REDIS_IMAGE_TAG` | `8.8-alpine` | Tag da imagem |
+| `REDISINSIGHT_IMAGE_TAG` | `3.8.0` | Tag da imagem do RedisInsight |
 | `BIND_ADDRESS` | `127.0.0.1` | Interface do host onde a porta é publicada |
 | `REDIS_PORT` | `6379` | Porta no host |
+| `REDISINSIGHT_PORT` | `5540` | Porta do painel RedisInsight no host |
 | `REDIS_PASSWORD` | `troque-esta-senha` | Senha do usuário `default` (**obrigatória**) |
 | `REDIS_MAXMEMORY` | `256mb` | Limite de memória do Redis |
 | `REDIS_MAXMEMORY_POLICY` | `noeviction` | Política quando o limite é atingido |
@@ -109,7 +113,19 @@ Pelo host, se você tiver o `redis-cli` instalado:
 redis-cli -h 127.0.0.1 -p 6379 -a troque-esta-senha ping
 ```
 
-Clientes gráficos: [Redis Insight](https://redis.io/insight/) (gratuito) ou o suporte a Redis do IntelliJ IDEA Ultimate / DataGrip. Conecte em `localhost:6379`, usuário `default` e a senha do `.env`.
+### Painel RedisInsight
+
+Abra http://localhost:5540. A conexão **`redis-local`** já aparece cadastrada, com a senha do `.env`, então basta clicar nela. No painel você pode:
+
+- navegar pelas chaves, ver e editar valores, TTL e tipo (**Browser**);
+- rodar comandos com autocompletar (**Workbench** e **CLI**);
+- acompanhar memória, clientes conectados e comandos lentos (**Analysis Tools** e **Slow Log**).
+
+Dentro do Docker, o painel acessa o Redis pelo nome do serviço (`redis:6379`), e não por `localhost`. Para cadastrar outro Redis manualmente, use esse mesmo endereço se ele estiver na mesma rede do Compose. As preferências do painel ficam no volume `redis_insight-data`.
+
+> Se você trocar `REDIS_PASSWORD` no `.env`, recrie o painel junto com o Redis: `docker compose up -d --force-recreate`.
+
+Também dá para usar o suporte a Redis do IntelliJ IDEA Ultimate / DataGrip: conecte em `localhost:6379`, usuário `default` e a senha do `.env`.
 
 ## 9. Conectar uma aplicação
 
@@ -190,5 +206,6 @@ class ProdutoService {
 | `WRONGPASS invalid username-password pair` | A senha está errada. Confira o `.env`. Se você alterou o `.env`, recrie o container: `docker compose up -d --force-recreate`. |
 | `Defina REDIS_PASSWORD no arquivo .env` | O arquivo `.env` não existe. Rode `cp .env.example .env`. |
 | `OOM command not allowed when used memory > 'maxmemory'` | O limite foi atingido com `noeviction`. Aumente `REDIS_MAXMEMORY`, apague chaves ou use `allkeys-lru` para cache. |
-| `port is already allocated` | Já existe um Redis na porta 6379. Altere `REDIS_PORT`. |
+| `port is already allocated` | Já existe um Redis na porta 6379 (ou outro serviço na 5540). Altere `REDIS_PORT` ou `REDISINSIGHT_PORT`. |
+| Painel mostra a conexão `redis-local` com erro de autenticação | A senha mudou no `.env`, mas o painel não foi recriado. Rode `docker compose up -d --force-recreate`. |
 | Aviso `vm.overcommit_memory` nos logs | É apenas um aviso em ambiente local. Em Linux, pode ser resolvido com `sudo sysctl vm.overcommit_memory=1`. |

@@ -26,7 +26,7 @@ docker compose version
 | PostgreSQL | Banco de dados relacional | `5432` | [`postgres/`](postgres/) |
 | Apache Kafka (KRaft) + Kafka UI | Streaming de eventos / mensageria | `9092` (Kafka), `19000` (UI) | [`kafka/`](kafka/) |
 | RabbitMQ | Message broker (AMQP) + painel web | `5672` (AMQP), `15672` (painel) | [`rabbitmq/`](rabbitmq/) |
-| Redis | Banco chave-valor em memória / cache | `6379` | [`redis/`](redis/) |
+| Redis + RedisInsight | Banco chave-valor em memória / cache + painel web | `6379` (Redis), `5540` (painel) | [`redis/`](redis/) |
 | SonarQube | Análise estática de código (Community Build) | `9000` | [`sonarqube/`](sonarqube/) |
 
 Por padrão, todas as portas são publicadas apenas em `127.0.0.1`, ou seja, ficam acessíveis só a partir da sua máquina. Veja [Acesso a partir de outras máquinas](#acesso-a-partir-de-outras-máquinas).

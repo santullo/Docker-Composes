@@ -1,4 +1,4 @@
-# Redis para desenvolvimento local.
+# Redis + painel RedisInsight para desenvolvimento local.
 # Uso: cp .env.example .env && docker compose up -d
 name: redis
 
@@ -36,5 +36,37 @@ services:
       retries: 5
       start_period: 10s
 
+  redisinsight:
+    # Painel web oficial do Redis (navegar por chaves, rodar comandos, ver métricas)
+    image: redis/redisinsight:${REDISINSIGHT_IMAGE_TAG:-3.8.0}
+    container_name: redisinsight
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Aceita os termos de uso na primeira abertura
+      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
+      # Cadastra automaticamente a conexão com o Redis deste Compose
+      # (endereço interno do Docker: não usar localhost aqui)
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: redis-local
+      RI_REDIS_USERNAME: default
+      RI_REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
+    ports:
+      # Painel em http://localhost:5540
+      - "${BIND_ADDRESS:-127.0.0.1}:${REDISINSIGHT_PORT:-5540}:5540"
+    volumes:
+      # Guarda preferências e conexões extras cadastradas no painel
+      - insight-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5540/api/health/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   data:
+  insight-data:
