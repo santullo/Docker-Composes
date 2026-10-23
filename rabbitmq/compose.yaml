@@ -1,0 +1,31 @@
+# RabbitMQ com Management Plugin para desenvolvimento local.
+# Uso: cp .env.example .env && docker compose up -d
+name: rabbitmq
+
+services:
+  rabbitmq:
+    image: rabbitmq:${RABBITMQ_IMAGE_TAG:-4.3-management}
+    container_name: rabbitmq
+    # O RabbitMQ guarda os dados em um diretório nomeado pelo nome do nó
+    # (rabbit@<hostname>). Um hostname fixo mantém os dados ao recriar o container.
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Defina RABBITMQ_DEFAULT_USER no arquivo .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Defina RABBITMQ_DEFAULT_PASS no arquivo .env}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - data:/var/lib/rabbitmq
+    healthcheck:
+      # Verifica se o nó está rodando e se os listeners (AMQP e HTTP) aceitam conexões.
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  data:

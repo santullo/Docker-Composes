@@ -1,0 +1,53 @@
+# PostgreSQL para desenvolvimento local.
+# Uso: cp .env.example .env && docker compose up -d
+name: postgres
+
+services:
+  postgres:
+
+    # Imagem oficial do PostgreSQL na versão 18 (Debian).
+    # Não troque para a variante "-alpine" com dados existentes: a diferença de
+    # biblioteca C (glibc x musl) altera a ordenação de textos e pode corromper índices.
+    image: postgres:${POSTGRES_IMAGE_TAG:-18}
+
+    # Nome personalizado do container
+    container_name: postgres
+
+    restart: unless-stopped
+
+    environment:
+
+      # Usuário, senha e banco criados na PRIMEIRA inicialização (diretório de dados vazio).
+      # Com dados existentes, alterar estes valores não muda o usuário já criado.
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+
+    ports:
+
+      # Mapeamento de portas
+      # IP_DO_HOST:PORTA_DO_PC:PORTA_DO_CONTAINER
+      # Por padrão, acessível apenas pela própria máquina em localhost:5432
+      - "${BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+
+      # Persistência de dados.
+      # Padrão: volume nomeado "postgres_data" (funciona em Windows e Linux).
+      # Para continuar usando a pasta da configuração anterior, defina no .env:
+      #   POSTGRES_DATA_SOURCE=C:/Meu_Banco_Postgres
+      # A partir do PostgreSQL 18, o ponto de montagem é /var/lib/postgresql
+      # (os dados ficam em /var/lib/postgresql/18/docker).
+      - "${POSTGRES_DATA_SOURCE:-data}:/var/lib/postgresql"
+
+    healthcheck:
+
+      # pg_isready verifica se o servidor aceita conexões
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  data:

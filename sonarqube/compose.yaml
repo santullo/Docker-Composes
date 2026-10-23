@@ -1,0 +1,63 @@
+# SonarQube Community Build + PostgreSQL dedicado, para desenvolvimento local.
+# Uso: cp .env.example .env && docker compose up -d
+# Requisito no host Linux/WSL2: vm.max_map_count >= 524288 (ver README.md).
+name: sonarqube
+
+services:
+  sonarqube-db:
+    # PostgreSQL exclusivo do SonarQube: não publica portas e não compartilha
+    # volume ou rede com o ambiente ../postgres.
+    image: postgres:${SONAR_DB_IMAGE_TAG:-17-alpine}
+    container_name: sonarqube-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SONAR_DB_NAME:-sonar}
+      POSTGRES_USER: ${SONAR_DB_USER:-sonar}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:?Defina SONAR_DB_PASSWORD no arquivo .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  sonarqube:
+    image: sonarqube:${SONARQUBE_IMAGE_TAG:-26.10.0.133078-community}
+    container_name: sonarqube
+    restart: unless-stopped
+    depends_on:
+      sonarqube-db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/${SONAR_DB_NAME:-sonar}
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER:-sonar}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:?Defina SONAR_DB_PASSWORD no arquivo .env}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${SONARQUBE_PORT:-9000}:9000"
+    volumes:
+      - data:/opt/sonarqube/data
+      - extensions:/opt/sonarqube/extensions
+      - logs:/opt/sonarqube/logs
+    # Limites exigidos pelo Elasticsearch embutido no SonarQube.
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+      nproc:
+        soft: 8192
+        hard: 8192
+    healthcheck:
+      # /api/system/status retorna "UP" quando o servidor está pronto para uso.
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  db-data:
+  data:
+  extensions:
+  logs:

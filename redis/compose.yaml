@@ -1,0 +1,40 @@
+# Redis para desenvolvimento local.
+# Uso: cp .env.example .env && docker compose up -d
+name: redis
+
+services:
+  redis:
+    image: redis:${REDIS_IMAGE_TAG:-8.8-alpine}
+    container_name: redis
+    restart: unless-stopped
+    environment:
+      # Lido pelo shell do comando abaixo e também pelo redis-cli
+      # (REDISCLI_AUTH evita digitar a senha em `redis-cli` dentro do container).
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
+    # Persistência: AOF (fsync a cada segundo) + snapshots RDB.
+    # A senha vem de variável de ambiente para não ficar gravada em arquivo versionado.
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server
+        --requirepass "$$REDIS_PASSWORD"
+        --appendonly yes
+        --appendfsync everysec
+        --save "3600 1 300 100 60 10000"
+        --maxmemory ${REDIS_MAXMEMORY:-256mb}
+        --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-noeviction}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  data:
